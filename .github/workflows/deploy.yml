@@ -91,7 +91,7 @@ jobs:
               git reset --hard origin/main
             else
               echo "Cloning rag-chatbot-ops repository..."
-              git clone https://github.com/XIYO/rag-chatbot-ops.git
+              git clone git@github.com:XIYO/rag-chatbot-ops.git
               cd rag-chatbot-ops
             fi
 
