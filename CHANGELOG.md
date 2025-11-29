@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/XIYO/rag-chatbot/compare/v1.0.1...v1.0.2) (2025-11-29)
+
+
+### Bug Fixes
+
+* add all required build environment variables ([5d31e29](https://github.com/XIYO/rag-chatbot/commit/5d31e294c6822290f0847daedd4bf429b19b21f3))
+
 ## [1.0.1](https://github.com/XIYO/rag-chatbot/compare/v1.0.0...v1.0.1) (2025-11-29)
 
 
