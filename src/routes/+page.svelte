@@ -1,8 +1,7 @@
 <script lang="ts">
-	import { tick, onMount } from 'svelte';
+	import { tick } from 'svelte';
 	import { marked } from 'marked';
 	import markedFootnote from 'marked-footnote';
-	import mermaid from 'mermaid';
 
 	marked.use(markedFootnote());
 	import { SendHorizontal, Square, Copy, Check, Brain, Search, FileText, File as FileIcon, ChevronDown, BookOpen, Wrench, MessageSquare } from '@lucide/svelte';
@@ -11,7 +10,6 @@
 	import { sendMessage as sendMessageRemote } from './chat.remote';
 	import { uploadFile } from './embedding.remote';
 	import { sessionFiles } from './file.remote';
-	import { graphDiagram } from './graph.remote';
 	import type { ThinkingStep, DocumentReference } from '$lib/server/chat/state';
 
 	interface Message {
@@ -53,20 +51,6 @@
 	let pendingFile: { file: File; id: string } | null = $state(null);
 	let sessionFileData = $state<SessionFile[]>([]);
 	let copiedMessageId = $state<string | null>(null);
-	let graphContainer: HTMLDivElement;
-
-	onMount(() => {
-		mermaid.initialize({ startOnLoad: false, theme: 'dark' });
-		loadGraph();
-	});
-
-	async function loadGraph() {
-		const diagram = await graphDiagram();
-		if (graphContainer && diagram) {
-			const { svg } = await mermaid.render('agent-graph', diagram);
-			graphContainer.innerHTML = svg;
-		}
-	}
 
 	async function copyMessage(messageId: string, content: string) {
 		await navigator.clipboard.writeText(content);
@@ -235,10 +219,6 @@
 				<span class="text-primary-500 text-sm font-medium">AI Agent</span>
 			</div>
 		</header>
-
-		<div class="border-surface-200 dark:border-surface-700 border-b p-4">
-			<div bind:this={graphContainer} class="graph-container flex justify-center overflow-x-auto"></div>
-		</div>
 
 	{#if files.length > 0}
 		<div class="border-surface-200 dark:border-surface-700 flex flex-wrap gap-2 border-b p-3">
@@ -490,9 +470,3 @@
 	</footer>
 	</div>
 </Tooltip.Provider>
-
-<style>
-	.graph-container :global(svg) {
-		max-height: 150px;
-	}
-</style>
