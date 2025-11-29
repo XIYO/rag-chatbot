@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/XIYO/rag-chatbot/compare/v1.0.0...v1.0.1) (2025-11-29)
+
+
+### Bug Fixes
+
+* add build environment variables for Supabase ([1449825](https://github.com/XIYO/rag-chatbot/commit/14498251ffc95492ad5dbaf6cc16513562a723f8))
+
 # 1.0.0 (2025-11-29)
 
 
