@@ -32,6 +32,12 @@ jobs:
         env:
           PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
           PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ${{ secrets.PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_CHAT_MODEL: ${{ secrets.LLM_CHAT_MODEL }}
+          EMBEDDING_MODEL: ${{ secrets.EMBEDDING_MODEL }}
+          MODEL_LOW: ${{ secrets.MODEL_LOW }}
+          MODEL_MEDIUM: ${{ secrets.MODEL_MEDIUM }}
+          MODEL_HIGH: ${{ secrets.MODEL_HIGH }}
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
