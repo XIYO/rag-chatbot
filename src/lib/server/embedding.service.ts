@@ -50,6 +50,10 @@ export async function uploadDocument(sessionId: string, fileName: string, fileBu
 	const docs = await loadPdf(fileBuffer);
 	const fullText = docs.map((d) => d.pageContent).join('\n\n');
 	console.log(`[PDF] ${docs.length}개 페이지 추출 완료`);
+	console.log(`[PDF] 추출된 텍스트 길이: ${fullText.length}자`);
+	if (fullText.length < 100) {
+		console.log(`[PDF] 추출된 내용: "${fullText.slice(0, 500)}"`);
+	}
 
 	console.log(`[Chunk] 텍스트 분할 중...`);
 	const chunks = await splitDocuments(docs);
@@ -140,23 +144,29 @@ async function generateEmbeddings(chunks: ChunkData[]) {
 	return embeddings.embedDocuments(texts);
 }
 
+const BATCH_SIZE = 100;
+
 async function saveChunks(fileId: string, chunks: ChunkData[], vectors: number[][]) {
 	const prefix = fileId.slice(0, 8);
 	const records = chunks.map((chunk, i) => ({
-		id: `${prefix}-${i.toString().padStart(3, '0')}`,
+		id: `${prefix}-${i.toString().padStart(4, '0')}`,
 		file_id: fileId,
 		content: chunk.content,
 		page_numbers: [chunk.pageNumber],
 		embedding: JSON.stringify(vectors[i])
 	}));
 
-	const { error } = await supabase.from('chunks').insert(records);
-	if (error) {
-		console.error(`[DB] 청크 저장 실패:`, error.message);
-		throw error;
+	for (let i = 0; i < records.length; i += BATCH_SIZE) {
+		const batch = records.slice(i, i + BATCH_SIZE);
+		const { error } = await supabase.from('chunks').insert(batch);
+		if (error) {
+			console.error(`[DB] 청크 저장 실패 (batch ${i / BATCH_SIZE + 1}):`, error.message);
+			throw error;
+		}
+		console.log(`[DB] 배치 ${i / BATCH_SIZE + 1}/${Math.ceil(records.length / BATCH_SIZE)} 저장 완료`);
 	}
 
-	console.log(`[DB] ${records.length}개 청크 저장 완료`);
+	console.log(`[DB] 총 ${records.length}개 청크 저장 완료`);
 }
 
 async function saveFile(

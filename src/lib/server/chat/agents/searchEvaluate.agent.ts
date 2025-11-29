@@ -127,7 +127,7 @@ Document context:
 	const retryHint = isRetry ? '\nPrevious search had insufficient results. Try fewer keywords.' : '';
 
 	const { searchQuery } = await analyzer.invoke(
-		`Generate a minimal search query with only essential keywords.
+		`Generate a minimal search query.
 
 ${contextHint}
 ${retryHint}
@@ -135,12 +135,9 @@ ${retryHint}
 Question: ${subQuery.query}
 
 Rules:
-- Output in ENGLISH
-- Use ONLY 2-4 core keywords, NO extra context words
-- DO NOT add years, trends, market, etc. unless explicitly asked
-- Example: "AI Coach 출시일" -> "AI Coach release"
-- Example: "Gemini 2.0 출시일" -> "Gemini 2.0 release"
-- Preserve proper nouns exactly`
+- Keep the SAME language as the question
+- Extract only the core keywords from the question
+- DO NOT add extra context or infer information`
 	);
 
 	const results = await retrieve(searchQuery, state.sessionId, { k: 5, multiQuery: true });

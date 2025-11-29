@@ -51,7 +51,6 @@
 	let pendingFile: { file: File; id: string } | null = $state(null);
 	let sessionFileData = $state<SessionFile[]>([]);
 	let copiedMessageId = $state<string | null>(null);
-
 	async function copyMessage(messageId: string, content: string) {
 		await navigator.clipboard.writeText(content);
 		copiedMessageId = messageId;
