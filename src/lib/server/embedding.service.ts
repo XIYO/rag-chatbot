@@ -21,7 +21,7 @@ const analysisLLM = new ChatOpenAI({
 const textSplitter = new RecursiveCharacterTextSplitter({
 	chunkSize: 500,
 	chunkOverlap: 50,
-	separators: ['\n\n', '\n', ' ', '']
+	separators: ['. ', '? ', '! ', ' ', '']
 });
 
 const AnalysisSchema = z.object({
