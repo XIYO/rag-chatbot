@@ -1,16 +1,18 @@
 <script lang="ts">
-	import { tick } from 'svelte';
+	import { tick, onMount } from 'svelte';
 	import { marked } from 'marked';
 	import markedFootnote from 'marked-footnote';
+	import mermaid from 'mermaid';
 
 	marked.use(markedFootnote());
-	import { SendHorizontal, Square, Copy, Check, Brain, Search, FileText, Globe, File as FileIcon, ChevronDown, BookOpen } from '@lucide/svelte';
+	import { SendHorizontal, Square, Copy, Check, Brain, Search, FileText, File as FileIcon, ChevronDown, BookOpen, Wrench, MessageSquare } from '@lucide/svelte';
 	import { Tooltip, Collapsible } from 'bits-ui';
 	import { getFileHash } from '$lib/client/hash';
 	import { sendMessage as sendMessageRemote } from './chat.remote';
 	import { uploadFile } from './embedding.remote';
 	import { sessionFiles } from './file.remote';
-	import type { ThinkingStep, WebSource, DocumentReference } from '$lib/server/chat/state';
+	import { graphDiagram } from './graph.remote';
+	import type { ThinkingStep, DocumentReference } from '$lib/server/chat/state';
 
 	interface Message {
 		id: string;
@@ -18,7 +20,6 @@
 		content: string;
 		suggestions?: string[];
 		thinkingSteps?: ThinkingStep[];
-		webSources?: WebSource[];
 		documentReferences?: DocumentReference[];
 	}
 
@@ -52,6 +53,20 @@
 	let pendingFile: { file: File; id: string } | null = $state(null);
 	let sessionFileData = $state<SessionFile[]>([]);
 	let copiedMessageId = $state<string | null>(null);
+	let graphContainer: HTMLDivElement;
+
+	onMount(() => {
+		mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+		loadGraph();
+	});
+
+	async function loadGraph() {
+		const diagram = await graphDiagram();
+		if (graphContainer && diagram) {
+			const { svg } = await mermaid.render('agent-graph', diagram);
+			graphContainer.innerHTML = svg;
+		}
+	}
 
 	async function copyMessage(messageId: string, content: string) {
 		await navigator.clipboard.writeText(content);
@@ -221,6 +236,10 @@
 			</div>
 		</header>
 
+		<div class="border-surface-200 dark:border-surface-700 border-b p-4">
+			<div bind:this={graphContainer} class="graph-container flex justify-center overflow-x-auto"></div>
+		</div>
+
 	{#if files.length > 0}
 		<div class="border-surface-200 dark:border-surface-700 flex flex-wrap gap-2 border-b p-3">
 			{#each files as file (file.id)}
@@ -292,36 +311,36 @@
 											<div class="space-y-2">
 												{#each message.thinkingSteps as step}
 													<div class="flex items-start gap-2">
-														{#if step.type === 'thought'}
-															<Brain class="text-primary-500 mt-0.5 h-4 w-4 shrink-0" />
-														{:else if step.type === 'action'}
-															<Search class="text-warning-500 mt-0.5 h-4 w-4 shrink-0" />
+														{#if step.type === 'tool_call'}
+															<Wrench class="text-warning-500 mt-0.5 h-4 w-4 shrink-0" />
+														{:else if step.type === 'tool_result'}
+															<Search class="text-success-500 mt-0.5 h-4 w-4 shrink-0" />
 														{:else}
-															<Globe class="text-success-500 mt-0.5 h-4 w-4 shrink-0" />
+															<MessageSquare class="text-primary-500 mt-0.5 h-4 w-4 shrink-0" />
 														{/if}
-														<span class="text-surface-600 dark:text-surface-300 whitespace-pre-wrap">{step.content}</span>
+														<span class="text-surface-600 dark:text-surface-300 whitespace-pre-wrap text-xs">{step.content}</span>
 													</div>
 												{/each}
 											</div>
 										</Collapsible.Content>
 									</Collapsible.Root>
 								{/if}
-								{#if message.documentReferences && message.documentReferences.length > 0}
+								{#if message.documentReferences?.some(r => r.cited)}
 									<Collapsible.Root class="bg-surface-100 dark:bg-surface-800 rounded-xl text-sm">
 										<Collapsible.Trigger class="text-surface-500 flex w-full items-center justify-between p-3 text-xs font-medium hover:bg-surface-200 dark:hover:bg-surface-700 rounded-xl transition-colors">
 											<div class="flex items-center gap-1.5">
 												<BookOpen class="h-3.5 w-3.5" />
-												문서 참조 ({message.documentReferences.length}개)
+												인용된 참조 ({message.documentReferences.filter(r => r.cited).length}개)
 											</div>
 											<ChevronDown class="h-4 w-4 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
 										</Collapsible.Trigger>
 										<Collapsible.Content class="px-3 pb-3">
 											<div class="space-y-3">
-												{#each message.documentReferences as ref}
-													<div class="bg-surface-50 dark:bg-surface-900 rounded-lg p-3">
+												{#each message.documentReferences.filter(r => r.cited) as ref}
+													<div class="bg-surface-50 dark:bg-surface-900 rounded-lg p-3 border-l-2 border-primary-500">
 														<div class="flex items-center justify-between mb-2">
 															<span class="text-xs font-medium text-primary-500">[{ref.id}]</span>
-															<span class="text-xs text-surface-500">{ref.fileName} - p.{ref.pageNumber}</span>
+															<span class="text-xs text-surface-500">p.{ref.pageNumber}</span>
 														</div>
 														<p class="text-xs text-surface-600 dark:text-surface-300 leading-relaxed line-clamp-4">
 															{ref.content}
@@ -332,32 +351,26 @@
 										</Collapsible.Content>
 									</Collapsible.Root>
 								{/if}
-								{#if message.webSources && message.webSources.length > 0}
+								{#if message.documentReferences?.some(r => !r.cited)}
 									<Collapsible.Root class="bg-surface-100 dark:bg-surface-800 rounded-xl text-sm">
 										<Collapsible.Trigger class="text-surface-500 flex w-full items-center justify-between p-3 text-xs font-medium hover:bg-surface-200 dark:hover:bg-surface-700 rounded-xl transition-colors">
 											<div class="flex items-center gap-1.5">
-												<Globe class="h-3.5 w-3.5" />
-												검색된 출처 ({message.webSources.length}개)
+												<FileText class="h-3.5 w-3.5" />
+												추가 검색 결과 ({message.documentReferences.filter(r => !r.cited).length}개)
 											</div>
 											<ChevronDown class="h-4 w-4 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
 										</Collapsible.Trigger>
 										<Collapsible.Content class="px-3 pb-3">
-											<div class="space-y-2">
-												{#each message.webSources as source}
-													<div class="bg-surface-50 dark:bg-surface-900 rounded-lg p-2">
-														<a
-															href={source.url}
-															target="_blank"
-															rel="noopener noreferrer"
-															class="text-primary-600 dark:text-primary-400 block truncate font-medium hover:underline"
-														>
-															{source.title}
-														</a>
-														{#if source.snippet}
-															<p class="text-surface-600 dark:text-surface-300 mt-1 text-xs line-clamp-2">
-																{source.snippet}
-															</p>
-														{/if}
+											<div class="space-y-3">
+												{#each message.documentReferences.filter(r => !r.cited) as ref}
+													<div class="bg-surface-50 dark:bg-surface-900 rounded-lg p-3 opacity-75">
+														<div class="flex items-center justify-between mb-2">
+															<span class="text-xs font-medium text-surface-400">[{ref.id}]</span>
+															<span class="text-xs text-surface-500">p.{ref.pageNumber}</span>
+														</div>
+														<p class="text-xs text-surface-600 dark:text-surface-300 leading-relaxed line-clamp-3">
+															{ref.content}
+														</p>
 													</div>
 												{/each}
 											</div>
@@ -425,7 +438,7 @@
 				try {
 					await submit();
 					if (uploadFile.result && currentFile) {
-						updateFileStatus(currentFile.id, 'done', uploadFile.result.chunksCount, uploadFile.result.message);
+						updateFileStatus(currentFile.id, 'done', uploadFile.result.chunksCount);
 						await refreshFiles();
 					}
 				} catch {
@@ -477,3 +490,9 @@
 	</footer>
 	</div>
 </Tooltip.Provider>
+
+<style>
+	.graph-container :global(svg) {
+		max-height: 150px;
+	}
+</style>

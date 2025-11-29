@@ -1,16 +1,9 @@
-import { SupabaseVectorStore } from '@langchain/community/vectorstores/supabase';
 import { OpenAIEmbeddings } from '@langchain/openai';
-import { Document } from '@langchain/core/documents';
 import { supabase } from '$lib/supabase';
 import { validationLLM } from './llm';
 import { z } from 'zod';
 import { LLM_API_KEY, EMBEDDING_MODEL } from '$env/static/private';
-
-interface RetrieverConfig {
-	sessionId: string;
-	k?: number;
-	multiQuery?: boolean;
-}
+import type { FileContext } from './state';
 
 const embeddings = new OpenAIEmbeddings({
 	openAIApiKey: LLM_API_KEY,
@@ -18,21 +11,30 @@ const embeddings = new OpenAIEmbeddings({
 });
 
 const MultiQuerySchema = z.object({
-	queries: z.array(z.string()).describe('3-5 different phrasings of the same question for vector search')
+	queries: z
+		.array(z.string())
+		.describe('3-5 different phrasings of the same question for vector search')
 });
+
+export interface ChunkResult {
+	id: string;
+	content: string;
+	pageNumbers: number[];
+	similarity: number;
+}
 
 async function generateMultiQueries(originalQuery: string): Promise<string[]> {
 	const prompt = `Generate 4 different phrasings of this search query for vector similarity search.
 Each phrasing should use different keywords while preserving the intent.
-Use specific terms that might appear in documents.
+Use specific terms that might appear in English documents.
 
 Original query: ${originalQuery}
 
 Rules:
-- Keep all queries in English
+- IMPORTANT: Generate ALL queries in ENGLISH regardless of input language
 - Use varied vocabulary and phrasing
-- Include keyword-style queries (e.g., "AI agent investment 2024")
-- Include natural question style (e.g., "What is the investment trend")`;
+- Include keyword-style queries (e.g., "AI agent market trends 2024")
+- Include natural question style (e.g., "What are the benefits of AI agents?")`;
 
 	const structuredLLM = validationLLM.withStructuredOutput(MultiQuerySchema);
 	const result = await structuredLLM.invoke(prompt);
@@ -41,59 +43,78 @@ Rules:
 	return [originalQuery, ...result.queries];
 }
 
-function createVectorStore(sessionId: string) {
-	return new SupabaseVectorStore(embeddings, {
-		client: supabase,
-		tableName: 'chunks',
-		queryName: 'match_chunks',
-		filter: { chat_id: sessionId }
-	});
-}
-
-interface ChunkResult {
-	id: number;
-	content: string;
-	pageNumber: number;
-	similarity: number;
-}
-
-async function searchWithQuery(
-	query: string,
-	vectorStore: SupabaseVectorStore,
-	k: number
+async function searchWithEmbedding(
+	queryEmbedding: number[],
+	sessionId: string,
+	k: number,
+	threshold: number
 ): Promise<ChunkResult[]> {
-	const results = await vectorStore.similaritySearchWithScore(query, k);
+	console.log(`[Retriever] RPC search_chunks 호출 - sessionId: ${sessionId}, k: ${k}, threshold: ${threshold}`);
+	const { data, error } = await supabase.rpc('search_chunks', {
+		query_embedding: JSON.stringify(queryEmbedding),
+		match_count: k,
+		p_chat_id: sessionId,
+		similarity_threshold: threshold
+	});
 
-	return results.map(([doc, score]) => ({
-		id: (doc.metadata.id as number) ?? 0,
-		content: doc.pageContent,
-		pageNumber: (doc.metadata.page_number as number) ?? 0,
-		similarity: score
+	if (error) {
+		console.error('[Retriever] Search failed:', error.message, error);
+		return [];
+	}
+
+	console.log(`[Retriever] RPC 결과: ${data?.length ?? 0}개`);
+
+	return (data ?? []).map((row: { id: string; content: string; page_numbers: number[]; similarity: number }) => ({
+		id: row.id,
+		content: row.content,
+		pageNumbers: row.page_numbers,
+		similarity: row.similarity
 	}));
+}
+
+export async function getFileContext(sessionId: string): Promise<FileContext | null> {
+	const { data } = await supabase
+		.from('chat_files')
+		.select('files(topic, context)')
+		.eq('chat_id', sessionId)
+		.limit(1)
+		.single();
+
+	if (!data?.files) return null;
+
+	const files = data.files as { topic: string | null; context: string | null };
+	return {
+		topic: files.topic,
+		context: files.context
+	};
 }
 
 export async function retrieve(
 	query: string,
 	sessionId: string,
-	options?: { k?: number; multiQuery?: boolean }
-): Promise<Document[]> {
+	options?: { k?: number; multiQuery?: boolean; threshold?: number }
+): Promise<ChunkResult[]> {
 	const k = options?.k ?? 5;
 	const multiQuery = options?.multiQuery ?? true;
-	const vectorStore = createVectorStore(sessionId);
+	const threshold = options?.threshold ?? 0.5;
 
 	let allChunks: ChunkResult[] = [];
 
 	if (multiQuery) {
 		const queries = await generateMultiQueries(query);
+		const queryEmbeddings = await embeddings.embedDocuments(queries);
+
 		const results = await Promise.all(
-			queries.map(async (q) => {
-				const chunks = await searchWithQuery(q, vectorStore, k);
-				console.log(`[MultiQuery] "${q.slice(0, 40)}" → ${chunks.length} results (top: ${chunks[0]?.similarity.toFixed(3) || 'N/A'})`);
+			queryEmbeddings.map(async (embedding, i) => {
+				const chunks = await searchWithEmbedding(embedding, sessionId, k, threshold);
+				console.log(
+					`[MultiQuery] "${queries[i].slice(0, 40)}" → ${chunks.length} results (top: ${chunks[0]?.similarity.toFixed(3) || 'N/A'})`
+				);
 				return chunks;
 			})
 		);
 
-		const seen = new Set<number>();
+		const seen = new Set<string>();
 		for (const chunks of results) {
 			for (const chunk of chunks) {
 				if (!seen.has(chunk.id)) {
@@ -106,7 +127,8 @@ export async function retrieve(
 		allChunks.sort((a, b) => b.similarity - a.similarity);
 		allChunks = allChunks.slice(0, k);
 	} else {
-		allChunks = await searchWithQuery(query, vectorStore, k);
+		const [embedding] = await embeddings.embedDocuments([query]);
+		allChunks = await searchWithEmbedding(embedding, sessionId, k, threshold);
 	}
 
 	if (allChunks.length === 0) {
@@ -118,62 +140,5 @@ export async function retrieve(
 	const bottomSim = allChunks[allChunks.length - 1]?.similarity.toFixed(3);
 	console.log(`[Retriever] Found ${allChunks.length} chunks (similarity: ${topSim} ~ ${bottomSim})`);
 
-	return allChunks.map((chunk) =>
-		new Document({
-			pageContent: chunk.content,
-			metadata: {
-				id: chunk.id,
-				pageNumber: chunk.pageNumber,
-				similarity: chunk.similarity
-			}
-		})
-	);
-}
-
-export function createRetriever(sessionId: string, options?: Partial<RetrieverConfig>) {
-	return {
-		async invoke(query: string) {
-			return retrieve(query, sessionId, options);
-		}
-	};
-}
-
-export async function expandChunks(
-	chunkIds: number[],
-	range: number = 1
-): Promise<Array<{ id: number; content: string; pageNumber: number }>> {
-	if (chunkIds.length === 0) return [];
-
-	const { data: targetChunks } = await supabase
-		.from('chunks')
-		.select('id, file_id, page_number')
-		.in('id', chunkIds);
-
-	if (!targetChunks || targetChunks.length === 0) return [];
-
-	const expandedIds = new Set<number>();
-	for (const chunk of targetChunks) {
-		for (let i = -range; i <= range; i++) {
-			expandedIds.add(chunk.id + i);
-		}
-	}
-
-	const fileIds = [...new Set(targetChunks.map((c) => c.file_id))];
-
-	const { data: expandedChunks } = await supabase
-		.from('chunks')
-		.select('id, content, page_number')
-		.in('id', [...expandedIds])
-		.in('file_id', fileIds)
-		.order('id');
-
-	if (!expandedChunks) return [];
-
-	console.log(`[Retriever] Expanded ${chunkIds.length} chunks → ${expandedChunks.length} chunks (range: ${range})`);
-
-	return expandedChunks.map((c) => ({
-		id: c.id,
-		content: c.content,
-		pageNumber: c.page_number ?? 0
-	}));
+	return allChunks;
 }

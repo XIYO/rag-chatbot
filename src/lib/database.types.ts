@@ -88,28 +88,28 @@ export type Database = {
       }
       chunks: {
         Row: {
-          content: string
-          created_at: string | null
-          embedding: string | null
+          id: string
           file_id: string | null
-          id: number
-          page_number: number | null
+          content: string
+          page_numbers: number[]
+          embedding: string | null
+          created_at: string | null
         }
         Insert: {
-          content: string
-          created_at?: string | null
-          embedding?: string | null
+          id: string
           file_id?: string | null
-          id?: number
-          page_number?: number | null
+          content: string
+          page_numbers: number[]
+          embedding?: string | null
+          created_at?: string | null
         }
         Update: {
-          content?: string
-          created_at?: string | null
-          embedding?: string | null
+          id?: string
           file_id?: string | null
-          id?: number
-          page_number?: number | null
+          content?: string
+          page_numbers?: number[]
+          embedding?: string | null
+          created_at?: string | null
         }
         Relationships: [
           {
@@ -161,14 +161,15 @@ export type Database = {
     Functions: {
       search_chunks: {
         Args: {
+          query_embedding: string
           match_count: number
           p_chat_id: string
-          query_embedding: string
           similarity_threshold?: number
         }
         Returns: {
+          id: string
           content: string
-          page_number: number
+          page_numbers: number[]
           similarity: number
         }[]
       }
