@@ -25,6 +25,15 @@ export interface EvaluationFeedback {
 	suggestion: string;
 }
 
+export interface SubQuery {
+	id: string;
+	query: string;
+	searchQuery: string;
+	chunks: DocumentChunk[];
+	status: 'pending' | 'searching' | 'done' | 'failed';
+	attempts: number;
+}
+
 export interface FileContext {
 	topic: string | null;
 	context: string | null;
@@ -59,6 +68,23 @@ export const AgentGraphState = Annotation.Root({
 	chunks: Annotation<DocumentChunk[]>({
 		reducer: (_, next) => next,
 		default: () => []
+	}),
+
+	subQueries: Annotation<SubQuery[]>({
+		reducer: (prev, next) => {
+			if (next.length === 0) return prev;
+			const map = new Map(prev.map((q) => [q.id, q]));
+			for (const q of next) {
+				map.set(q.id, q);
+			}
+			return Array.from(map.values());
+		},
+		default: () => []
+	}),
+
+	currentSubQueryId: Annotation<string | null>({
+		reducer: (_, next) => next,
+		default: () => null
 	}),
 
 	evaluationFeedback: Annotation<EvaluationFeedback | null>({

@@ -1,7 +1,7 @@
 import { StateGraph, START, END, MemorySaver } from '@langchain/langgraph';
-import { searchNode } from './agents/search.agent';
-import { evaluateNode } from './agents/evaluate.agent';
-import { responseNode } from './agents/response.agent';
+import { decomposeNode } from './agents/decompose.agent';
+import { searchEvaluateNode } from './agents/searchEvaluate.agent';
+import { synthesizeNode } from './agents/synthesize.agent';
 import { AgentGraphState } from './state';
 import type { AgentGraphStateType } from './state';
 
@@ -11,12 +11,12 @@ const checkpointer = new MemorySaver();
 
 export function createAgentGraph() {
 	return new StateGraph(AgentGraphState)
-		.addNode('search', searchNode)
-		.addNode('evaluate', evaluateNode, { ends: ['search', 'response'] })
-		.addNode('response', responseNode)
-		.addEdge(START, 'search')
-		.addEdge('search', 'evaluate')
-		.addEdge('response', END)
+		.addNode('decompose', decomposeNode, { ends: ['searchEvaluate'] })
+		.addNode('searchEvaluate', searchEvaluateNode)
+		.addNode('synthesize', synthesizeNode)
+		.addEdge(START, 'decompose')
+		.addEdge('searchEvaluate', 'synthesize')
+		.addEdge('synthesize', END)
 		.compile({ checkpointer });
 }
 
@@ -33,6 +33,8 @@ export async function runAgentGraph(sessionId: string, query: string) {
 			userIntent: '',
 			fileContext: null,
 			chunks: [],
+			subQueries: [],
+			currentSubQueryId: null,
 			evaluationFeedback: null,
 			searchAttempts: 0,
 			thinkingSteps: [],
