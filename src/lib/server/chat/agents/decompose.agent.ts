@@ -31,14 +31,14 @@ ${docContext}
 
 Question: ${state.originalQuery}
 
-isRelevant=false when:
-- Greetings like "hi", "hello", "hey"
-- Off-topic questions unrelated to the document
-- Empty or meaningless input
-
 isRelevant=true when:
-- Question is about the document topic
-- Asking for information that could be in the document
+- Question is specifically about the document topic
+- Question asks for information that could reasonably be found in the document
+
+isRelevant=false when:
+- Question has no connection to the document topic
+- Question is about something completely different from the document
+- Greetings, chitchat, or meaningless input
 
 isComplex=true when:
 - Multiple distinct topics connected by "and", "or", conjunctions
