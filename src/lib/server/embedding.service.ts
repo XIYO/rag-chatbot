@@ -35,14 +35,13 @@ interface ChunkData {
 	pageNumber: number;
 }
 
-export async function uploadDocument(sessionId: string, fileName: string, fileBuffer: Buffer) {
+export async function uploadDocument(fileName: string, fileBuffer: Buffer) {
 	console.log(`[Upload] ${fileName} 처리 시작`);
 	const hash = getFileHash(fileBuffer.buffer as ArrayBuffer);
 
 	const existing = await findExistingFile(hash);
 	if (existing) {
-		console.log(`[Upload] 기존 파일 발견, 세션에 연결`);
-		await linkFileToChat(sessionId, existing.id);
+		console.log(`[Upload] 기존 파일 발견`);
 		return { fileId: existing.id, fileName, hash, chunksCount: 0, status: 'linked' as const };
 	}
 
@@ -64,7 +63,6 @@ export async function uploadDocument(sessionId: string, fileName: string, fileBu
 	console.log(`[Analysis] 완료`);
 
 	const fileId = await saveFile(hash, fileName, analysis);
-	await linkFileToChat(sessionId, fileId);
 
 	console.log(`[Embedding] 임베딩 생성 중...`);
 	const vectors = await generateEmbeddings(chunks);
@@ -187,12 +185,6 @@ async function saveFile(
 		.select('id')
 		.single();
 	return data!.id;
-}
-
-async function linkFileToChat(sessionId: string, fileId: string) {
-	await supabase
-		.from('chat_files')
-		.upsert({ chat_id: sessionId, file_id: fileId }, { onConflict: 'chat_id,file_id' });
 }
 
 export async function getFileAnalysis(fileId: string) {

@@ -9,7 +9,7 @@
 	import { getFileHash } from '$lib/client/hash';
 	import { sendMessage as sendMessageRemote } from './chat.remote';
 	import { uploadFile } from './embedding.remote';
-	import { sessionFiles } from './file.remote';
+	import { files as filesRemote } from './file.remote';
 	import type { ThinkingStep, DocumentReference } from '$lib/server/chat/state';
 
 	interface Message {
@@ -30,7 +30,7 @@
 		message?: string;
 	}
 
-	interface SessionFile {
+	interface FileData {
 		id: string;
 		filename: string;
 		topic: string | null;
@@ -46,10 +46,10 @@
 	let isLoading = $state(false);
 	let loadingStage = $state('');
 	let abortController: AbortController | null = null;
-	let sessionId = $state('');
+	let sessionId = $state(crypto.randomUUID());
 	let uploadFormRef: HTMLFormElement | null = $state(null);
 	let pendingFile: { file: File; id: string } | null = $state(null);
-	let sessionFileData = $state<SessionFile[]>([]);
+	let fileData = $state<FileData[]>([]);
 	let copiedMessageId = $state<string | null>(null);
 	async function copyMessage(messageId: string, content: string) {
 		await navigator.clipboard.writeText(content);
@@ -60,21 +60,15 @@
 	}
 
 	const suggestedQuestions = $derived(
-		sessionFileData.flatMap((f) => f.suggested_questions ?? [])
+		fileData.flatMap((f) => f.suggested_questions ?? [])
 	);
 
-	$effect(() => {
-		sessionId = crypto.randomUUID();
-	});
-
 	async function refreshFiles() {
-		if (sessionId) {
-			const result = await sessionFiles({ sessionId });
-			sessionFileData = result.map((f) => ({
-				...f,
-				suggested_questions: f.suggested_questions as string[] | null
-			}));
-		}
+		const result = await filesRemote();
+		fileData = result.map((f) => ({
+			...f,
+			suggested_questions: f.suggested_questions as string[] | null
+		}));
 	}
 
 	function selectQuestion(question: string) {
@@ -106,7 +100,7 @@
 				const checkResponse = await fetch('/api/files/check', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ hash, chatId: sessionId })
+					body: JSON.stringify({ hash })
 				});
 				const checkResult = await checkResponse.json();
 
@@ -403,33 +397,30 @@
 		{/if}
 	</main>
 
-	{#if sessionId}
-		<form
-			bind:this={uploadFormRef}
-			class="hidden"
-			enctype="multipart/form-data"
-			{...uploadFile.enhance(async ({ submit }) => {
-				const currentFile = pendingFile;
-				try {
-					await submit();
-					if (uploadFile.result && currentFile) {
-						updateFileStatus(currentFile.id, 'done', uploadFile.result.chunksCount);
-						await refreshFiles();
-					}
-				} catch {
-					if (currentFile) {
-						updateFileStatus(currentFile.id, 'error');
-					}
-				} finally {
-					pendingFile = null;
+	<form
+		bind:this={uploadFormRef}
+		class="hidden"
+		enctype="multipart/form-data"
+		{...uploadFile.enhance(async ({ submit }) => {
+			const currentFile = pendingFile;
+			try {
+				await submit();
+				if (uploadFile.result && currentFile) {
+					updateFileStatus(currentFile.id, 'done', uploadFile.result.chunksCount);
+					await refreshFiles();
 				}
-			})}
-		>
-			<input type="hidden" name="sessionId" value={sessionId} />
-			<input type="hidden" name="fileName" value={pendingFile?.file.name ?? ''} />
-			<input type="file" name="file" />
-		</form>
-	{/if}
+			} catch {
+				if (currentFile) {
+					updateFileStatus(currentFile.id, 'error');
+				}
+			} finally {
+				pendingFile = null;
+			}
+		})}
+	>
+		<input type="hidden" name="fileName" value={pendingFile?.file.name ?? ''} />
+		<input type="file" name="file" />
+	</form>
 
 	<footer class="border-surface-200 dark:border-surface-700 border-t p-4">
 		<div class="mx-auto flex max-w-3xl gap-2">

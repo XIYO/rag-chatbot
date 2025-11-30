@@ -140,7 +140,7 @@ ${retryHint}
 - 추가 컨텍스트를 덧붙이거나 정보를 추론하지 마라`
 	);
 
-	const results = await retrieve(searchQuery, state.sessionId, { k: 5, multiQuery: true });
+	const results = await retrieve(searchQuery, { k: 5, multiQuery: true });
 
 	const chunks: DocumentChunk[] = results.map((result, i) => ({
 		refId: `[${subQuery.id}:${i + 1}]`,

@@ -13,7 +13,7 @@ export async function decomposeNode(state: AgentGraphStateType) {
 	console.log(`[Decompose] 노드 시작 - query: "${state.originalQuery}"`);
 	console.time('[Decompose] 소요시간');
 
-	const fileContext = state.fileContext ?? (await getFileContext(state.sessionId));
+	const fileContext = state.fileContext ?? (await getFileContext());
 
 	const llm = createAgentLLM('research');
 	const analyzer = llm.withStructuredOutput(DecomposeSchema);
@@ -60,7 +60,6 @@ ${docContext}
 		},
 		goto: subQueries.map((sq) =>
 			new Send('searchEvaluate', {
-				sessionId: state.sessionId,
 				originalQuery: state.originalQuery,
 				fileContext,
 				currentSubQueryId: sq.id,

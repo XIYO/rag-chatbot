@@ -1,23 +1,10 @@
 import { supabase } from '$lib/supabase';
 
-export async function getSessionFiles(sessionId: string) {
+export async function getAllFiles() {
 	const { data } = await supabase
-		.from('chat_files')
-		.select(`
-			file_id,
-			files (
-				id,
-				filename,
-				topic,
-				context,
-				suggested_questions
-			)
-		`)
-		.eq('chat_id', sessionId);
+		.from('files')
+		.select('id, filename, topic, context, suggested_questions')
+		.order('created_at', { ascending: false });
 
-	if (!data) return [];
-
-	return data
-		.map((cf) => cf.files)
-		.filter((f): f is NonNullable<typeof f> => f !== null);
+	return data ?? [];
 }

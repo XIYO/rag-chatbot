@@ -1,10 +1,6 @@
 import { query } from '$app/server';
-import * as v from 'valibot';
-import { getSessionFiles } from '$lib/server/file.service';
+import { getAllFiles } from '$lib/server/file.service';
 
-export const sessionFiles = query(
-	v.object({ sessionId: v.string() }),
-	async ({ sessionId }) => {
-		return await getSessionFiles(sessionId);
-	}
-);
+export const files = query(async () => {
+	return await getAllFiles();
+});

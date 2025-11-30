@@ -4,13 +4,12 @@ import { uploadDocument } from '$lib/server/embedding.service';
 
 export const uploadFile = form(
 	v.object({
-		sessionId: v.string(),
 		fileName: v.string(),
 		file: v.file()
 	}),
-	async ({ sessionId, fileName, file }) => {
+	async ({ fileName, file }) => {
 		const arrayBuffer = await file.arrayBuffer();
 		const fileBuffer = Buffer.from(arrayBuffer);
-		return await uploadDocument(sessionId, fileName, fileBuffer);
+		return await uploadDocument(fileName, fileBuffer);
 	}
 );

@@ -5,19 +5,14 @@ import type { RequestHandler } from './$types';
 export const POST: RequestHandler = async ({ request }) => {
 	const formData = await request.formData();
 	const file = formData.get('file') as File | null;
-	const chatId = formData.get('chatId') as string | null;
 
 	if (!file) {
 		return json({ error: 'No file provided' }, { status: 400 });
 	}
 
-	if (!chatId) {
-		return json({ error: 'No chatId provided' }, { status: 400 });
-	}
-
 	try {
 		const buffer = Buffer.from(await file.arrayBuffer());
-		const result = await uploadDocument(chatId, file.name, buffer);
+		const result = await uploadDocument(file.name, buffer);
 
 		return json(result);
 	} catch (error) {
