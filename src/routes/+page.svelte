@@ -12,6 +12,20 @@
 	import { files as filesRemote } from './file.remote';
 	import type { ThinkingStep, DocumentReference } from '$lib/server/chat/state';
 
+	interface Props {
+		data: {
+			files: {
+				id: string;
+				filename: string;
+				topic: string | null;
+				context: string | null;
+				suggested_questions: string[] | null;
+			}[];
+		};
+	}
+
+	let { data }: Props = $props();
+
 	interface Message {
 		id: string;
 		role: 'user' | 'assistant';
@@ -30,14 +44,6 @@
 		message?: string;
 	}
 
-	interface FileData {
-		id: string;
-		filename: string;
-		topic: string | null;
-		context: string | null;
-		suggested_questions: string[] | null;
-	}
-
 	const UPLOAD_STAGES = ['해시 계산중...', '중복 확인중...', '파일 저장중...', '임베딩중...'];
 
 	let messages = $state<Message[]>([]);
@@ -49,7 +55,7 @@
 	let sessionId = $state(crypto.randomUUID());
 	let uploadFormRef: HTMLFormElement | null = $state(null);
 	let pendingFile: { file: File; id: string } | null = $state(null);
-	let fileData = $state<FileData[]>([]);
+	let fileData = $state(data.files);
 	let copiedMessageId = $state<string | null>(null);
 	async function copyMessage(messageId: string, content: string) {
 		await navigator.clipboard.writeText(content);
