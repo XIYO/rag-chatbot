@@ -35,43 +35,29 @@ interface ChunkData {
 	pageNumber: number;
 }
 
+/**
+ * PDF 문서를 업로드하고 임베딩을 생성한다.
+ * @param fileName 파일명
+ * @param fileBuffer 파일 바이너리 데이터
+ * @returns 업로드 결과
+ */
 export async function uploadDocument(fileName: string, fileBuffer: Buffer) {
-	console.log(`[Upload] ${fileName} 처리 시작`);
 	const hash = getFileHash(fileBuffer.buffer as ArrayBuffer);
 
 	const existing = await findExistingFile(hash);
 	if (existing) {
-		console.log(`[Upload] 기존 파일 발견`);
 		return { fileId: existing.id, fileName, hash, chunksCount: 0, status: 'linked' as const };
 	}
 
-	console.log(`[PDF] 텍스트 추출 중...`);
 	const docs = await loadPdf(fileBuffer);
 	const fullText = docs.map((d) => d.pageContent).join('\n\n');
-	console.log(`[PDF] ${docs.length}개 페이지 추출 완료`);
-	console.log(`[PDF] 추출된 텍스트 길이: ${fullText.length}자`);
-	if (fullText.length < 100) {
-		console.log(`[PDF] 추출된 내용: "${fullText.slice(0, 500)}"`);
-	}
 
-	console.log(`[Chunk] 텍스트 분할 중...`);
 	const chunks = await splitDocuments(docs);
-	console.log(`[Chunk] ${chunks.length}개 청크 생성 완료`);
-
-	console.log(`[Analysis] 문서 분석 중...`);
 	const analysis = await analyzeDocument(fullText);
-	console.log(`[Analysis] 완료`);
-
 	const fileId = await saveFile(hash, fileName, analysis);
-
-	console.log(`[Embedding] 임베딩 생성 중...`);
 	const vectors = await generateEmbeddings(chunks);
-	console.log(`[Embedding] ${vectors.length}개 임베딩 생성 완료`);
-
-	console.log(`[DB] 청크 저장 중...`);
 	await saveChunks(fileId, chunks, vectors);
 
-	console.log(`[Upload] 완료: ${chunks.length}개 청크 생성됨`);
 	return {
 		fileId,
 		fileName,
@@ -157,14 +143,8 @@ async function saveChunks(fileId: string, chunks: ChunkData[], vectors: number[]
 	for (let i = 0; i < records.length; i += BATCH_SIZE) {
 		const batch = records.slice(i, i + BATCH_SIZE);
 		const { error } = await supabase.from('chunks').insert(batch);
-		if (error) {
-			console.error(`[DB] 청크 저장 실패 (batch ${i / BATCH_SIZE + 1}):`, error.message);
-			throw error;
-		}
-		console.log(`[DB] 배치 ${i / BATCH_SIZE + 1}/${Math.ceil(records.length / BATCH_SIZE)} 저장 완료`);
+		if (error) throw error;
 	}
-
-	console.log(`[DB] 총 ${records.length}개 청크 저장 완료`);
 }
 
 async function saveFile(
@@ -185,13 +165,4 @@ async function saveFile(
 		.select('id')
 		.single();
 	return data!.id;
-}
-
-export async function getFileAnalysis(fileId: string) {
-	const { data } = await supabase
-		.from('files')
-		.select('topic, context, suggested_questions')
-		.eq('id', fileId)
-		.single();
-	return data;
 }

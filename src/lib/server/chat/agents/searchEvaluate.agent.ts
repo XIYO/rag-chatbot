@@ -16,25 +16,26 @@ const EvaluateSchema = z.object({
 	suggestion: z.string().describe('불충분할 경우 쿼리 개선 제안')
 });
 
+/**
+ * 하위 질문에 대해 검색을 수행하고 결과를 평가한다.
+ * 결과가 불충분하면 쿼리를 개선하여 재시도한다.
+ * @param state 그래프 상태
+ * @returns 검색 결과와 사고 단계
+ */
 export async function searchEvaluateNode(state: AgentGraphStateType) {
 	const subQueryId = state.currentSubQueryId;
 	const subQuery = state.subQueries.find((q) => q.id === subQueryId);
 
 	if (!subQuery) {
-		console.error(`[SearchEvaluate] SubQuery not found: ${subQueryId}`);
 		return {};
 	}
 
-	console.log(`[SearchEvaluate] 시작 - id: ${subQuery.id}, query: "${subQuery.query}"`);
-	console.time(`[SearchEvaluate] ${subQuery.id} 소요시간`);
-
 	const thinkingSteps: ThinkingStep[] = [];
 	let currentQuery = subQuery;
-	let userIntent = '';
+	const userIntent = await analyzeIntent(currentQuery.query);
 
 	while (currentQuery.attempts < MAX_ATTEMPTS) {
 		const attempt = currentQuery.attempts + 1;
-		console.log(`[SearchEvaluate] ${subQuery.id} - 시도 ${attempt}/${MAX_ATTEMPTS}`);
 
 		const { searchQuery, chunks } = await executeSearch(
 			currentQuery,
@@ -42,16 +43,12 @@ export async function searchEvaluateNode(state: AgentGraphStateType) {
 			attempt > 1
 		);
 
-		const intentResult = await analyzeIntent(currentQuery.query, state);
-		userIntent = intentResult;
-
 		thinkingSteps.push({
 			type: 'reasoning' as const,
 			content: `[${subQuery.id}] "${currentQuery.query}" -> "${searchQuery}"로 검색, ${chunks.length}개 결과`
 		});
 
 		if (chunks.length >= MIN_CHUNKS) {
-			console.log(`[SearchEvaluate] ${subQuery.id} - 충분한 결과`);
 			currentQuery = {
 				...currentQuery,
 				searchQuery,
@@ -63,7 +60,6 @@ export async function searchEvaluateNode(state: AgentGraphStateType) {
 		}
 
 		if (attempt >= MAX_ATTEMPTS) {
-			console.log(`[SearchEvaluate] ${subQuery.id} - 최대 시도 도달`);
 			currentQuery = {
 				...currentQuery,
 				searchQuery,
@@ -98,8 +94,6 @@ export async function searchEvaluateNode(state: AgentGraphStateType) {
 			attempts: attempt
 		};
 	}
-
-	console.timeEnd(`[SearchEvaluate] ${subQuery.id} 소요시간`);
 
 	return {
 		subQueries: [currentQuery],
@@ -151,7 +145,7 @@ ${retryHint}
 	return { searchQuery, chunks };
 }
 
-async function analyzeIntent(query: string, state: AgentGraphStateType): Promise<string> {
+async function analyzeIntent(query: string): Promise<string> {
 	const llm = createAgentLLM('research');
 	const analyzer = llm.withStructuredOutput(QuerySchema);
 

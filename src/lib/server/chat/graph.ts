@@ -9,6 +9,10 @@ export type { AgentGraphStateType };
 
 const checkpointer = new MemorySaver();
 
+/**
+ * RAG 에이전트 그래프를 생성한다.
+ * @returns 컴파일된 StateGraph 인스턴스
+ */
 export function createAgentGraph() {
 	return new StateGraph(AgentGraphState)
 		.addNode('decompose', decomposeNode, { ends: ['searchEvaluate'] })
@@ -20,12 +24,16 @@ export function createAgentGraph() {
 		.compile({ checkpointer });
 }
 
+/**
+ * 사용자 쿼리로 에이전트 그래프를 실행한다.
+ * @param sessionId 세션 식별자
+ * @param query 사용자 질문
+ * @returns 그래프 실행 결과
+ */
 export async function runAgentGraph(sessionId: string, query: string) {
-	console.log(`[Graph] 그래프 생성 중...`);
 	const graph = createAgentGraph();
-	console.log(`[Graph] 그래프 실행 시작`);
 
-	const result = await graph.invoke(
+	return graph.invoke(
 		{
 			sessionId,
 			originalQuery: query,
@@ -42,10 +50,12 @@ export async function runAgentGraph(sessionId: string, query: string) {
 		},
 		{ configurable: { thread_id: sessionId } }
 	);
-
-	return result;
 }
 
+/**
+ * 그래프 구조를 Mermaid 다이어그램으로 반환한다.
+ * @returns Mermaid 형식 문자열
+ */
 export function getGraphMermaid() {
 	const graph = createAgentGraph();
 	const mermaid = graph.getGraph().drawMermaid();

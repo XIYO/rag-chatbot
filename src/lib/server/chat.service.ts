@@ -1,14 +1,14 @@
 import { runAgentGraph } from './chat/graph';
 import type { ThinkingStep } from './chat/state';
 
+/**
+ * 사용자 메시지를 처리하고 RAG 기반 응답을 생성한다.
+ * @param sessionId 세션 식별자
+ * @param message 사용자 질문
+ * @returns 어시스턴트 응답 객체
+ */
 export async function chat(sessionId: string, message: string) {
-	console.log(`[Chat] 시작 - sessionId: ${sessionId}, message: "${message}"`);
-	console.time('[Chat] 전체 소요시간');
-
 	const result = await runAgentGraph(sessionId, message);
-
-	console.timeEnd('[Chat] 전체 소요시간');
-	console.log(`[Chat] 완료 - chunks: ${result.chunks.length}, response: ${result.finalResponse.slice(0, 100)}...`);
 
 	const references = result.chunks.map((c, i) => ({
 		id: `ref:${i + 1}`,

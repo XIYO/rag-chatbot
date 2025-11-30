@@ -1,16 +1,19 @@
 import { Annotation } from '@langchain/langgraph';
 
+/** 사고 과정 단계 */
 export interface ThinkingStep {
 	type: 'tool_call' | 'tool_result' | 'reasoning';
 	content: string;
 }
 
+/** 검색된 문서 청크 */
 export interface DocumentChunk {
 	refId: string;
 	content: string;
 	pageNumber: number;
 }
 
+/** 문서 참조 정보 */
 export interface DocumentReference {
 	id: string;
 	pageNumber: number;
@@ -18,6 +21,7 @@ export interface DocumentReference {
 	cited: boolean;
 }
 
+/** 검색 결과 평가 피드백 */
 export interface EvaluationFeedback {
 	previousQuery: string;
 	chunkCount: number;
@@ -25,6 +29,7 @@ export interface EvaluationFeedback {
 	suggestion: string;
 }
 
+/** 하위 질문 */
 export interface SubQuery {
 	id: string;
 	query: string;
@@ -34,6 +39,7 @@ export interface SubQuery {
 	attempts: number;
 }
 
+/** 파일 컨텍스트 정보 */
 export interface FileContext {
 	topic: string | null;
 	context: string | null;

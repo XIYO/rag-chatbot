@@ -5,9 +5,9 @@ DROP POLICY IF EXISTS "Allow all on chat_files" ON chat_files;
 DROP TABLE IF EXISTS chat_files;
 
 CREATE OR REPLACE FUNCTION match_documents(
-  query_embedding extensions.vector(1536),
-  match_count int DEFAULT 5,
-  filter jsonb DEFAULT '{}'
+  filter jsonb,
+  match_count int,
+  query_embedding extensions.vector(1536)
 )
 RETURNS TABLE(
   id text,

@@ -1,7 +1,7 @@
 import { Command, Send } from '@langchain/langgraph';
 import { z } from 'zod';
 import { createAgentLLM } from '../llm';
-import { getFileContext } from '../retriever';
+import { getFileContext } from '$lib/server/file.service';
 import type { AgentGraphStateType, SubQuery } from '../state';
 
 const DecomposeSchema = z.object({
@@ -9,10 +9,13 @@ const DecomposeSchema = z.object({
 	subQueries: z.array(z.string()).describe('하위 질문 목록, 복합 질문이 아니면 단일 질문')
 });
 
+/**
+ * 질문을 분석하여 하위 질문으로 분해한다.
+ * 복합 질문인 경우 각 하위 질문을 병렬로 처리하도록 Send 명령을 생성한다.
+ * @param state 그래프 상태
+ * @returns Command 객체
+ */
 export async function decomposeNode(state: AgentGraphStateType) {
-	console.log(`[Decompose] 노드 시작 - query: "${state.originalQuery}"`);
-	console.time('[Decompose] 소요시간');
-
 	const fileContext = state.fileContext ?? (await getFileContext());
 
 	const llm = createAgentLLM('research');
@@ -35,8 +38,6 @@ ${docContext}
 - 최대 5개의 하위 질문`
 	);
 
-	console.log(`[Decompose] 분석 결과 - isComplex: ${result.isComplex}, count: ${result.subQueries.length}`);
-
 	const subQueries: SubQuery[] = result.subQueries.map((query, i) => ({
 		id: `sq-${i}`,
 		query,
@@ -45,8 +46,6 @@ ${docContext}
 		status: 'pending' as const,
 		attempts: 0
 	}));
-
-	console.timeEnd('[Decompose] 소요시간');
 
 	const thinkingContent = result.isComplex
 		? `질문을 ${subQueries.length}개의 하위 질문으로 분해합니다: ${subQueries.map((q) => `"${q.query}"`).join(', ')}`

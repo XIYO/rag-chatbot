@@ -22,10 +22,13 @@ const RESPONSE_TEMPLATE = `당신은 문서 기반 Q&A 어시스턴트다. 마�
 ## 원본 질문
 {query}`;
 
+/**
+ * 검색 결과를 종합하여 최종 응답을 생성한다.
+ * 모든 하위 질문의 결과를 통합하고 인용 번호를 재할당한다.
+ * @param state 그래프 상태
+ * @returns 최종 응답과 청크 정보
+ */
 export async function synthesizeNode(state: AgentGraphStateType) {
-	console.log(`[Synthesize] 노드 시작 - subQueries: ${state.subQueries.length}`);
-	console.time('[Synthesize] 소요시간');
-
 	const { subQueries, originalQuery, userIntent } = state;
 
 	const allChunks: DocumentChunk[] = [];
@@ -49,8 +52,6 @@ export async function synthesizeNode(state: AgentGraphStateType) {
 	}
 
 	if (allChunks.length === 0) {
-		console.log(`[Synthesize] 모든 서브쿼리에서 결과 없음`);
-		console.timeEnd('[Synthesize] 소요시간');
 		return {
 			chunks: [],
 			finalResponse: '문서에서 관련 정보를 찾을 수 없습니다.',
@@ -71,12 +72,8 @@ export async function synthesizeNode(state: AgentGraphStateType) {
 		.replace('{query}', originalQuery)
 		.replace('{styleGuide}', styleGuide);
 
-	console.log(`[Synthesize] LLM 호출 중...`);
 	const result = await llm.invoke([new HumanMessage(prompt)]);
 	const response = typeof result.content === 'string' ? result.content : '';
-
-	console.log(`[Synthesize] 응답 생성 완료 - ${response.length}자`);
-	console.timeEnd('[Synthesize] 소요시간');
 
 	const successCount = subQueries.filter((q) => q.status === 'done' && q.chunks.length > 0).length;
 

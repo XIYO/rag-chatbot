@@ -14,6 +14,11 @@ const AGENT_CONFIG: Record<string, LLMConfig> = {
 	validation: { temperature: 0, maxTokens: 200, model: 'gpt-4o-mini' }
 };
 
+/**
+ * 에이전트 유형에 맞는 LLM 인스턴스를 생성한다.
+ * @param agentType 에이전트 유형
+ * @returns ChatOpenAI 인스턴스
+ */
 export function createAgentLLM(agentType: keyof typeof AGENT_CONFIG) {
 	const config = AGENT_CONFIG[agentType];
 	return new ChatOpenAI({
@@ -23,5 +28,3 @@ export function createAgentLLM(agentType: keyof typeof AGENT_CONFIG) {
 		maxTokens: config.maxTokens
 	});
 }
-
-export const validationLLM = createAgentLLM('validation');
