@@ -1,6 +1,6 @@
 # RAG Chatbot
 
-[https://rag-chatbot.xiyo.dev](https://rag-chatbot.xiyo.dev)
+라이브 데모: [https://rag-chatbot.xiyo.dev](https://rag-chatbot.xiyo.dev)
 
 LangChain/LangGraph 기반 문서 Q&A 에이전트
 
