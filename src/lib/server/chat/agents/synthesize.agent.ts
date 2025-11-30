@@ -29,7 +29,11 @@ For each topic, use the following format:
  * @returns 최종 응답과 청크 정보
  */
 export async function synthesizeNode(state: AgentGraphStateType) {
-	const { subQueries, originalQuery, userIntent } = state;
+	const { subQueries, originalQuery, userIntent, finalResponse } = state;
+
+	if (finalResponse) {
+		return {};
+	}
 
 	const allChunks: DocumentChunk[] = [];
 	const subQueryContexts: string[] = [];

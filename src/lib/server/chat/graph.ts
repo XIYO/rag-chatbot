@@ -15,7 +15,7 @@ const checkpointer = new MemorySaver();
  */
 export function createAgentGraph() {
 	return new StateGraph(AgentGraphState)
-		.addNode('decompose', decomposeNode, { ends: ['searchEvaluate'] })
+		.addNode('decompose', decomposeNode, { ends: ['searchEvaluate', 'synthesize'] })
 		.addNode('searchEvaluate', searchEvaluateNode)
 		.addNode('synthesize', synthesizeNode)
 		.addEdge(START, 'decompose')

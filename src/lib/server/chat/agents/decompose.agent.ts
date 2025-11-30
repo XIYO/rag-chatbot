@@ -5,8 +5,9 @@ import { getFileContext } from '$lib/server/file.service';
 import type { AgentGraphStateType, SubQuery } from '../state';
 
 const DecomposeSchema = z.object({
+	isRelevant: z.boolean().describe('true if question is related to document topic, false for greetings or off-topic'),
 	isComplex: z.boolean().describe('true if question contains multiple distinct topics'),
-	subQueries: z.array(z.string()).describe('list of sub-questions, single question if not complex')
+	subQueries: z.array(z.string()).describe('list of sub-questions, single question if not complex, empty if not relevant')
 });
 
 /**
@@ -24,26 +25,42 @@ export async function decomposeNode(state: AgentGraphStateType) {
 	const docContext = fileContext?.topic ? `Document topic: ${fileContext.topic}` : '';
 
 	const result = await analyzer.invoke(
-		`Determine whether to decompose the question.
+		`Analyze the question and determine how to process it.
 
 ${docContext}
 
 Question: ${state.originalQuery}
 
+isRelevant=false when:
+- Greetings like "hi", "hello", "hey"
+- Off-topic questions unrelated to the document
+- Empty or meaningless input
+
+isRelevant=true when:
+- Question is about the document topic
+- Asking for information that could be in the document
+
 isComplex=true when:
 - Multiple distinct topics connected by "and", "or", conjunctions
 - Comma-separated items asking about different things
 
-isComplex=false when:
-- Single topic question
-- Simple information request
-- Explanation of one concept
-
-Strictly forbidden:
+Rules:
+- If isRelevant=false, set subQueries to empty array
 - Do NOT expand or interpret the question beyond its literal meaning
-- Do NOT add context not present in the original question
 - Put the original question as-is into subQueries`
 	);
+
+	if (!result.isRelevant || result.subQueries.length === 0) {
+		return new Command({
+			update: {
+				fileContext,
+				subQueries: [],
+				finalResponse: '문서와 관련된 질문을 해주세요.',
+				thinkingSteps: [{ type: 'reasoning' as const, content: 'Question is not related to document topic' }]
+			},
+			goto: 'synthesize'
+		});
+	}
 
 	const subQueries: SubQuery[] = result.subQueries.map((query, i) => ({
 		id: `sq-${i}`,
