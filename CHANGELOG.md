@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/XIYO/rag-chatbot/compare/v1.1.0...v1.1.1) (2025-11-30)
+
+
+### Bug Fixes
+
+* 문서와 관련 없는 질문은 바로 종료 ([3314a2b](https://github.com/XIYO/rag-chatbot/commit/3314a2b2f638acf2942ab7125b605acd8f1e845a))
+
 # [1.1.0](https://github.com/XIYO/rag-chatbot/compare/v1.0.3...v1.1.0) (2025-11-30)
 
 
