@@ -1,3 +1,10 @@
+## [1.1.3](https://github.com/XIYO/rag-chatbot/compare/v1.1.2...v1.1.3) (2025-11-30)
+
+
+### Bug Fixes
+
+* 관련성 판단 완화 - 의심스러우면 통과시킴 ([14a11f5](https://github.com/XIYO/rag-chatbot/commit/14a11f5cdeb9e2e94ab39c92e99a1d21abed0cdf))
+
 ## [1.1.2](https://github.com/XIYO/rag-chatbot/compare/v1.1.1...v1.1.2) (2025-11-30)
 
 
