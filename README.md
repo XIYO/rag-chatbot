@@ -1,5 +1,7 @@
 # RAG Chatbot
 
+과제로 전달받은 파일이 미리 임베딩되어 있습니다.
+
 라이브 데모: [https://rag-chatbot.xiyo.dev](https://rag-chatbot.xiyo.dev)
 
 LangChain/LangGraph 기반 문서 Q&A 에이전트
