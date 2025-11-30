@@ -72,10 +72,6 @@ flowchart TD
     D -->|하위 질문 2| SE2[searchEvaluate]
     D -->|하위 질문 N| SEN[searchEvaluate]
 
-    SE1 -->|결과 부족| SE1
-    SE2 -->|결과 부족| SE2
-    SEN -->|결과 부족| SEN
-
     SE1 --> S[synthesize]
     SE2 --> S
     SEN --> S
