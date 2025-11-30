@@ -5,8 +5,8 @@ import { getFileContext } from '$lib/server/file.service';
 import type { AgentGraphStateType, SubQuery } from '../state';
 
 const DecomposeSchema = z.object({
-	isComplex: z.boolean().describe('질문이 여러 개의 별개 주제를 포함하면 true'),
-	subQueries: z.array(z.string()).describe('하위 질문 목록, 복합 질문이 아니면 단일 질문')
+	isComplex: z.boolean().describe('true if question contains multiple distinct topics'),
+	subQueries: z.array(z.string()).describe('list of sub-questions, single question if not complex')
 });
 
 /**
@@ -21,21 +21,28 @@ export async function decomposeNode(state: AgentGraphStateType) {
 	const llm = createAgentLLM('research');
 	const analyzer = llm.withStructuredOutput(DecomposeSchema);
 
-	const docContext = fileContext?.topic ? `문서 주제: ${fileContext.topic}` : '';
+	const docContext = fileContext?.topic ? `Document topic: ${fileContext.topic}` : '';
 
 	const result = await analyzer.invoke(
-		`이 질문을 하위 질문으로 분해해야 하는지 분석하라.
+		`Determine whether to decompose the question.
 
 ${docContext}
 
-질문: ${state.originalQuery}
+Question: ${state.originalQuery}
 
-규칙:
-- 질문이 여러 개의 별개 주제를 다루는 경우에만 isComplex=true로 설정하라
-- 주제들이 관련되어 있거나 함께 답할 수 있으면 단일 질문으로 유지하라
-- 각 하위 질문은 독립적으로 답변 가능해야 한다
-- 원래 언어와 의도를 유지하라
-- 최대 5개의 하위 질문`
+isComplex=true when:
+- Multiple distinct topics connected by "and", "or", conjunctions
+- Comma-separated items asking about different things
+
+isComplex=false when:
+- Single topic question
+- Simple information request
+- Explanation of one concept
+
+Strictly forbidden:
+- Do NOT expand or interpret the question beyond its literal meaning
+- Do NOT add context not present in the original question
+- Put the original question as-is into subQueries`
 	);
 
 	const subQueries: SubQuery[] = result.subQueries.map((query, i) => ({
@@ -48,8 +55,8 @@ ${docContext}
 	}));
 
 	const thinkingContent = result.isComplex
-		? `질문을 ${subQueries.length}개의 하위 질문으로 분해합니다: ${subQueries.map((q) => `"${q.query}"`).join(', ')}`
-		: `단일 질문으로 처리합니다: "${state.originalQuery}"`;
+		? `Decomposing into ${subQueries.length} sub-questions: ${subQueries.map((q) => `"${q.query}"`).join(', ')}`
+		: `Processing as single question: "${state.originalQuery}"`;
 
 	return new Command({
 		update: {

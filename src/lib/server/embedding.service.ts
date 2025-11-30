@@ -25,9 +25,9 @@ const textSplitter = new RecursiveCharacterTextSplitter({
 });
 
 const AnalysisSchema = z.object({
-	topic: z.string().describe('문서의 핵심 주제를 한 문장으로'),
-	context: z.string().describe('문서의 범위, 대상 독자, 핵심 개념을 2-3문장으로 설명. 질의 개선에 사용됨'),
-	suggestedQuestions: z.array(z.string()).describe('문서 내용 파악에 유용한 질문 5개')
+	topic: z.string().describe('core topic of the document in one sentence'),
+	context: z.string().describe('scope, target audience, key concepts in 2-3 sentences, used for query refinement'),
+	suggestedQuestions: z.array(z.string()).describe('5 useful questions for understanding the document')
 });
 
 interface ChunkData {
@@ -110,15 +110,15 @@ async function splitDocuments(docs: Awaited<ReturnType<typeof loadPdf>>): Promis
 async function analyzeDocument(fullText: string) {
 	const truncated = fullText.slice(0, 12000);
 
-	const prompt = `다음 문서를 분석하세요.
+	const prompt = `Analyze the following document.
 
-문서 내용:
+Document content:
 ${truncated}
 
-분석 요구사항:
-1. topic: 이 문서가 다루는 핵심 주제를 한 문장으로 명확하게
-2. context: 문서의 범위와 맥락을 설명. 이 설명은 사용자 질의를 문서에 맞게 개선하는데 사용됨. 예: "이 문서는 2024년 AI Agent 시장 동향을 다룹니다. 주요 기업들의 제품 비교, 투자 현황, 기술 트렌드를 포함합니다."
-3. suggestedQuestions: 이 문서를 처음 읽는 사람이 물어볼 만한 핵심 질문 5개. 문서 내용으로 답변 가능해야 함`;
+Analysis requirements:
+1. topic: Clearly state the core topic of this document in one sentence
+2. context: Explain the scope and context of the document. This description is used to refine user queries. Example: "This document covers AI Agent market trends in 2024. It includes product comparisons of major companies, investment status, and technology trends."
+3. suggestedQuestions: 5 key questions a first-time reader might ask. Must be answerable from the document content`;
 
 	return analysisLLM.withStructuredOutput(AnalysisSchema).invoke(prompt);
 }

@@ -2,24 +2,24 @@ import { HumanMessage } from '@langchain/core/messages';
 import { createAgentLLM } from '../llm';
 import type { AgentGraphStateType, DocumentChunk } from '../state';
 
-const RESPONSE_TEMPLATE = `당신은 문서 기반 Q&A 어시스턴트다. 마크다운 형식으로 한국어로 답변하라.
+const RESPONSE_TEMPLATE = `You are a document-based Q&A assistant. Answer in Korean using markdown format.
 
-## 출력 구조
-각 주제에 대해 다음 형식을 사용하라:
-### [제목]
-[인용이 포함된 설명]
+## Output structure
+For each topic, use the following format:
+### [Title]
+[Explanation with citations]
 
-## 규칙
-- 각 주제 제목에 ### 헤딩을 사용하라
-- 각 제목 아래에 설명을 작성하라
-- 컨텍스트에 제공된 대로 정확히 [ref:N] 형식으로 인라인 인용하라
-- 중요한 용어는 굵게 표시하라
+## Rules
+- Use ### headings for each topic title
+- Write explanations under each title
+- Use inline citations exactly as [ref:N] format provided in the context
+- Bold important terms
 {styleGuide}
 
-## 하위 질문과 컨텍스트
+## Sub-questions and context
 {subQueryContexts}
 
-## 원본 질문
+## Original question
 {query}`;
 
 /**
@@ -47,25 +47,25 @@ export async function synthesizeNode(state: AgentGraphStateType) {
 				.join('\n');
 			subQueryContexts.push(`### ${sq.query}\n${context}`);
 		} else {
-			subQueryContexts.push(`### ${sq.query}\n(검색 결과 없음)`);
+			subQueryContexts.push(`### ${sq.query}\n(No search results)`);
 		}
 	}
 
 	if (allChunks.length === 0) {
 		return {
 			chunks: [],
-			finalResponse: '문서에서 관련 정보를 찾을 수 없습니다.',
+			finalResponse: 'No relevant information found in documents.',
 			thinkingSteps: [
 				{
 					type: 'tool_result' as const,
-					content: '모든 검색에서 관련 문서를 찾지 못했습니다.'
+					content: 'No relevant documents found in any search.'
 				}
 			]
 		};
 	}
 
 	const llm = createAgentLLM('response');
-	const styleGuide = userIntent ? `\n## 스타일 가이드\n${userIntent}` : '';
+	const styleGuide = userIntent ? `\n## Style guide\n${userIntent}` : '';
 
 	const prompt = RESPONSE_TEMPLATE
 		.replace('{subQueryContexts}', subQueryContexts.join('\n\n'))
@@ -83,7 +83,7 @@ export async function synthesizeNode(state: AgentGraphStateType) {
 		thinkingSteps: [
 			{
 				type: 'tool_result' as const,
-				content: `${subQueries.length}개 질문 중 ${successCount}개에서 ${allChunks.length}개의 참조를 찾아 응답을 생성했습니다.`
+				content: `Generated response with ${allChunks.length} references from ${successCount} of ${subQueries.length} questions.`
 			}
 		]
 	};
