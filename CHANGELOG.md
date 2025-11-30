@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/XIYO/rag-chatbot/compare/v1.0.3...v1.1.0) (2025-11-30)
+
+
+### Features
+
+* 페이지 로드 시 기존 파일의 추천 질문 표시 ([ac757c8](https://github.com/XIYO/rag-chatbot/commit/ac757c866313e139a593602137f6edd0a4fb6e92))
+
 ## [1.0.3](https://github.com/XIYO/rag-chatbot/compare/v1.0.2...v1.0.3) (2025-11-30)
 
 
