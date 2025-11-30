@@ -1,3 +1,10 @@
+## [1.0.3](https://github.com/XIYO/rag-chatbot/compare/v1.0.2...v1.0.3) (2025-11-30)
+
+
+### Bug Fixes
+
+* include production dependencies in Docker image ([101f176](https://github.com/XIYO/rag-chatbot/commit/101f176f64ab35326057928a907a4cf53464deb9))
+
 ## [1.0.2](https://github.com/XIYO/rag-chatbot/compare/v1.0.1...v1.0.2) (2025-11-29)
 
 
