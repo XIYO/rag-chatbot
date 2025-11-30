@@ -1,3 +1,6 @@
 [submodule "ops"]
 	path = ops
 	url = https://github.com/XIYO/rag-chatbot-ops.git
+[submodule "rag-chatbot-slidev"]
+	path = rag-chatbot-slidev
+	url = https://github.com/XIYO/rag-chatbot-slidev.git

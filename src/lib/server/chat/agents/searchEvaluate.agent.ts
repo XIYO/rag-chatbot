@@ -7,13 +7,13 @@ const MAX_ATTEMPTS = 2;
 const MIN_CHUNKS = 2;
 
 const QuerySchema = z.object({
-	searchQuery: z.string().describe('English search query optimized for vector similarity search'),
-	userIntent: z.string().describe('Korean response style instruction, empty if none')
+	searchQuery: z.string().describe('벡터 유사도 검색에 최적화된 검색 쿼리'),
+	userIntent: z.string().describe('응답 스타일 지시사항, 없으면 빈 문자열')
 });
 
 const EvaluateSchema = z.object({
-	sufficient: z.boolean().describe('true if results are sufficient to answer the question'),
-	suggestion: z.string().describe('Query improvement suggestion if not sufficient')
+	sufficient: z.boolean().describe('결과가 질문에 답하기에 충분하면 true'),
+	suggestion: z.string().describe('불충분할 경우 쿼리 개선 제안')
 });
 
 export async function searchEvaluateNode(state: AgentGraphStateType) {
@@ -119,25 +119,25 @@ async function executeSearch(
 	let contextHint = '';
 	if (state.fileContext?.topic || state.fileContext?.context) {
 		contextHint = `
-Document context:
-- Topic: ${state.fileContext.topic || 'N/A'}
-- Context: ${state.fileContext.context || 'N/A'}`;
+문서 컨텍스트:
+- 주제: ${state.fileContext.topic || '없음'}
+- 맥락: ${state.fileContext.context || '없음'}`;
 	}
 
-	const retryHint = isRetry ? '\nPrevious search had insufficient results. Try fewer keywords.' : '';
+	const retryHint = isRetry ? '\n이전 검색 결과가 부족했다. 키워드를 줄여서 시도하라.' : '';
 
 	const { searchQuery } = await analyzer.invoke(
-		`Generate a minimal search query.
+		`최소한의 검색 쿼리를 생성하라.
 
 ${contextHint}
 ${retryHint}
 
-Question: ${subQuery.query}
+질문: ${subQuery.query}
 
-Rules:
-- Keep the SAME language as the question
-- Extract only the core keywords from the question
-- DO NOT add extra context or infer information`
+규칙:
+- 질문과 동일한 언어를 유지하라
+- 질문에서 핵심 키워드만 추출하라
+- 추가 컨텍스트를 덧붙이거나 정보를 추론하지 마라`
 	);
 
 	const results = await retrieve(searchQuery, state.sessionId, { k: 5, multiQuery: true });
@@ -156,15 +156,15 @@ async function analyzeIntent(query: string, state: AgentGraphStateType): Promise
 	const analyzer = llm.withStructuredOutput(QuerySchema);
 
 	const { userIntent } = await analyzer.invoke(
-		`Detect user intent for response style.
+		`응답 스타일에 대한 사용자 의도를 파악하라.
 
-Question: ${query}
+질문: ${query}
 
-Detect:
-- Format: table, list, summary, comparison
-- Tone: formal/casual, technical/simple
-- Depth: brief/detailed
-Output in Korean, empty if no specific style.`
+파악 항목:
+- 형식: 표, 목록, 요약, 비교
+- 어조: 공식적/비공식적, 기술적/간단
+- 깊이: 간략/상세
+특정 스타일이 없으면 빈 문자열을 반환하라.`
 	);
 
 	return userIntent;
@@ -184,27 +184,27 @@ async function evaluateResults(
 		.map((c) => c.content.slice(0, 200))
 		.join('\n---\n');
 
-	const docContext = state.fileContext?.topic ? `Document topic: ${state.fileContext.topic}` : '';
+	const docContext = state.fileContext?.topic ? `문서 주제: ${state.fileContext.topic}` : '';
 
 	return evaluator.invoke(
-		`Evaluate if search results can answer the question.
+		`검색 결과가 질문에 답할 수 있는지 평가하라.
 
 ${docContext}
 
-Question: ${originalQuery}
-Search query: ${searchQuery}
+질문: ${originalQuery}
+검색 쿼리: ${searchQuery}
 
-Results preview:
-${preview || 'No results'}
+결과 미리보기:
+${preview || '결과 없음'}
 
-Set sufficient=true if:
-- ANY result contains specific information that directly answers the question
-- Question is unrelated to document topic
+sufficient=true 조건:
+- 어떤 결과든 질문에 직접 답하는 구체적 정보를 포함
+- 질문이 문서 주제와 무관함
 
-Set sufficient=false if:
-- Results exist but none actually answer the question
-- Need different keywords to find the answer
+sufficient=false 조건:
+- 결과는 있지만 실제로 질문에 답하지 않음
+- 답을 찾으려면 다른 키워드가 필요함
 
-If not sufficient, suggest a simpler query with fewer keywords.`
+불충분할 경우 키워드를 줄인 더 단순한 쿼리를 제안하라.`
 	);
 }

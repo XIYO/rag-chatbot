@@ -5,8 +5,8 @@ import { getFileContext } from '../retriever';
 import type { AgentGraphStateType, SubQuery } from '../state';
 
 const DecomposeSchema = z.object({
-	isComplex: z.boolean().describe('true if the question contains multiple distinct topics'),
-	subQueries: z.array(z.string()).describe('List of sub-questions, or single question if not complex')
+	isComplex: z.boolean().describe('질문이 여러 개의 별개 주제를 포함하면 true'),
+	subQueries: z.array(z.string()).describe('하위 질문 목록, 복합 질문이 아니면 단일 질문')
 });
 
 export async function decomposeNode(state: AgentGraphStateType) {
@@ -18,21 +18,21 @@ export async function decomposeNode(state: AgentGraphStateType) {
 	const llm = createAgentLLM('research');
 	const analyzer = llm.withStructuredOutput(DecomposeSchema);
 
-	const docContext = fileContext?.topic ? `Document topic: ${fileContext.topic}` : '';
+	const docContext = fileContext?.topic ? `문서 주제: ${fileContext.topic}` : '';
 
 	const result = await analyzer.invoke(
-		`Analyze if this question needs to be decomposed into sub-questions.
+		`이 질문을 하위 질문으로 분해해야 하는지 분석하라.
 
 ${docContext}
 
-Question: ${state.originalQuery}
+질문: ${state.originalQuery}
 
-Rules:
-- Set isComplex=true only if the question asks about MULTIPLE DISTINCT topics
-- If topics are related or can be answered together, keep as single question
-- Each sub-question should be answerable independently
-- Preserve the original language and intent
-- Maximum 5 sub-questions`
+규칙:
+- 질문이 여러 개의 별개 주제를 다루는 경우에만 isComplex=true로 설정하라
+- 주제들이 관련되어 있거나 함께 답할 수 있으면 단일 질문으로 유지하라
+- 각 하위 질문은 독립적으로 답변 가능해야 한다
+- 원래 언어와 의도를 유지하라
+- 최대 5개의 하위 질문`
 	);
 
 	console.log(`[Decompose] 분석 결과 - isComplex: ${result.isComplex}, count: ${result.subQueries.length}`);

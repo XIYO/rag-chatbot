@@ -13,7 +13,7 @@ const embeddings = new OpenAIEmbeddings({
 const MultiQuerySchema = z.object({
 	queries: z
 		.array(z.string())
-		.describe('3-5 different phrasings of the same question for vector search')
+		.describe('벡터 검색을 위한 동일 질문의 3-5개 다른 표현')
 });
 
 export interface ChunkResult {
@@ -24,17 +24,17 @@ export interface ChunkResult {
 }
 
 async function generateMultiQueries(originalQuery: string): Promise<string[]> {
-	const prompt = `Generate 4 different phrasings of this search query for vector similarity search.
-Each phrasing should use different keywords while preserving the intent.
-Use specific terms that might appear in English documents.
+	const prompt = `벡터 유사도 검색을 위해 이 검색 쿼리의 4가지 다른 표현을 생성하라.
+각 표현은 의도를 유지하면서 다른 키워드를 사용해야 한다.
+영어 문서에 나타날 수 있는 구체적인 용어를 사용하라.
 
-Original query: ${originalQuery}
+원본 쿼리: ${originalQuery}
 
-Rules:
-- IMPORTANT: Generate ALL queries in ENGLISH regardless of input language
-- Use varied vocabulary and phrasing
-- Include keyword-style queries (e.g., "AI agent market trends 2024")
-- Include natural question style (e.g., "What are the benefits of AI agents?")`;
+규칙:
+- 중요: 입력 언어와 관계없이 모든 쿼리를 영어로 생성하라
+- 다양한 어휘와 표현을 사용하라
+- 키워드 스타일 쿼리를 포함하라 (예: "AI agent market trends 2024")
+- 자연스러운 질문 스타일을 포함하라 (예: "What are the benefits of AI agents?")`;
 
 	const structuredLLM = validationLLM.withStructuredOutput(MultiQuerySchema);
 	const result = await structuredLLM.invoke(prompt);

@@ -2,24 +2,24 @@ import { HumanMessage } from '@langchain/core/messages';
 import { createAgentLLM } from '../llm';
 import type { AgentGraphStateType, DocumentChunk } from '../state';
 
-const RESPONSE_TEMPLATE = `You are a document-based Q&A assistant. Answer in Korean using markdown format.
+const RESPONSE_TEMPLATE = `당신은 문서 기반 Q&A 어시스턴트다. 마크다운 형식으로 한국어로 답변하라.
 
-## Output Structure
-For each topic, use this format:
-### [Title]
-[Description with citations]
+## 출력 구조
+각 주제에 대해 다음 형식을 사용하라:
+### [제목]
+[인용이 포함된 설명]
 
-## Rules
-- Use ### heading for each topic title
-- Write description under each title
-- Cite sources inline as [ref:N] format exactly as provided in context
-- Bold important terms
+## 규칙
+- 각 주제 제목에 ### 헤딩을 사용하라
+- 각 제목 아래에 설명을 작성하라
+- 컨텍스트에 제공된 대로 정확히 [ref:N] 형식으로 인라인 인용하라
+- 중요한 용어는 굵게 표시하라
 {styleGuide}
 
-## Sub-questions and their contexts
+## 하위 질문과 컨텍스트
 {subQueryContexts}
 
-## Original Question
+## 원본 질문
 {query}`;
 
 export async function synthesizeNode(state: AgentGraphStateType) {
@@ -64,7 +64,7 @@ export async function synthesizeNode(state: AgentGraphStateType) {
 	}
 
 	const llm = createAgentLLM('response');
-	const styleGuide = userIntent ? `\n## Style Guide\n${userIntent}` : '';
+	const styleGuide = userIntent ? `\n## 스타일 가이드\n${userIntent}` : '';
 
 	const prompt = RESPONSE_TEMPLATE
 		.replace('{subQueryContexts}', subQueryContexts.join('\n\n'))

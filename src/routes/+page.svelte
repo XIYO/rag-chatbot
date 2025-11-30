@@ -211,12 +211,8 @@
 
 <Tooltip.Provider delayDuration={200}>
 	<div class="flex h-screen flex-col bg-surface-50 dark:bg-surface-900">
-		<header class="border-surface-200 dark:border-surface-700 flex items-center justify-between border-b p-4">
+		<header class="border-surface-200 dark:border-surface-700 flex items-center border-b p-4">
 			<h1 class="text-xl font-bold">RAG Chatbot</h1>
-			<div class="flex items-center gap-2">
-				<Brain class="text-primary-500 h-5 w-5" />
-				<span class="text-primary-500 text-sm font-medium">AI Agent</span>
-			</div>
 		</header>
 
 	{#if files.length > 0}
