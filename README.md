@@ -33,7 +33,7 @@ GPT는 JSON 스키마 기반으로 값까지 강제할 수 있어서
 
 ### VectorDB: PostgreSQL + pgvector (Supabase)
 
-벡터 DB는 단순성 때문에 PostgreSQL + pgvector 조합을 선택했습니다.
+벡터 DB는 단순성 때문에 PostgreSQL + pgvector 조합을 선택했습니다.(RDB에 벡터 DB 기능을 추가했습니다.)
 전용 벡터 DB에는 아직 익숙하지 않아서, 가장 익숙한 PostgreSQL에 pgvector 확장을 붙이는 방식으로 연결했습니다.
 
 라이브 데모를 제공하려면 인프라를 직접 구축해야 하는데, 이번 과제에서는 시간적으로 부담이 컸습니다.
